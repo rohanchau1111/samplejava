@@ -1,18 +1,24 @@
-name: Building the Java project
-on: [workflow_dispatch]
-jobs: 
-    build-java: 
-          runs-on: ubuntu-latest
-          steps:
-             - name: Checkout Repo
-               uses: actions/checkout@v3            
-             - name: Setup JDK 
-               uses: actions/setup-java@v3
-               with:
-                   distribution: 'temurin'
-                   java-version: '11'
-             - name: Build with Maven
-               run: mvn clean install 
-               
-             - run: echo "Build Succesfully..."
-              
+name: Building the Java Project
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-java:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Build with Maven
+        run: mvn clean install
+
+      - name: Success Message
+        run: echo "Build Successfully..."
