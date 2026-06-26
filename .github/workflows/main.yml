@@ -5,27 +5,28 @@ on:
   workflow_dispatch:
     inputs:
       azure_client_id:
-        description: Azure Client ID
+        description: "Enter Azure Client ID"
         required: true
         type: string
 
       azure_client_secret:
-        description: Azure Client Secret
+        description: "Enter Azure Client Secret"
         required: true
         type: string
 
       azure_subscription_id:
-        description: Azure Subscription ID
+        description: "Enter Azure Subscription ID"
         required: true
         type: string
 
       azure_tenant_id:
-        description: Azure Tenant ID
+        description: "Enter Azure Tenant ID"
         required: true
         type: string
 
 jobs:
   azure-login:
+    name: Login to Azure
     runs-on: self-hosted
 
     steps:
@@ -35,31 +36,69 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ github.event.inputs.azure_client_id }}
-          tenant-id: ${{ github.event.inputs.azure_tenant_id }}
-          subscription-id: ${{ github.event.inputs.azure_subscription_id }}
-          client-secret: ${{ github.event.inputs.azure_client_secret }}
+          creds: |
+            {
+              "clientId": "${{ github.event.inputs.azure_client_id }}",
+              "clientSecret": "${{ github.event.inputs.azure_client_secret }}",
+              "subscriptionId": "${{ github.event.inputs.azure_subscription_id }}",
+              "tenantId": "${{ github.event.inputs.azure_tenant_id }}"
+            }
+
+      - name: Verify Azure CLI Installation
+        run: |
+          az version
 
       - name: Show Current Azure Account
         run: |
+          echo "==============================="
           echo "Current Azure Account"
+          echo "==============================="
           az account show
 
-      - name: Show Subscription
+      - name: List Azure Subscriptions
         run: |
+          echo "==============================="
+          echo "Azure Subscriptions"
+          echo "==============================="
           az account list --output table
 
       - name: List Resource Groups
         run: |
+          echo "==============================="
+          echo "Resource Groups"
+          echo "==============================="
           az group list --output table
 
       - name: List Virtual Machines
         run: |
+          echo "==============================="
+          echo "Virtual Machines"
+          echo "==============================="
           az vm list --output table
 
-      - name: Logout
-        run: az logout
+      - name: List Storage Accounts
+        run: |
+          echo "==============================="
+          echo "Storage Accounts"
+          echo "==============================="
+          az storage account list --output table
+
+      - name: List Virtual Networks
+        run: |
+          echo "==============================="
+          echo "Virtual Networks"
+          echo "==============================="
+          az network vnet list --output table
+
+      - name: Logout from Azure
+        if: always()
+        run: |
+          az logout
 
       - name: Success
-        run: echo "Azure login completed successfully."
+        run: |
+          echo "========================================="
+          echo "Azure Login Successful"
+          echo "All Azure CLI commands executed."
+          echo "========================================="
 ```
