@@ -1,69 +1,65 @@
 ```yaml
-name: Build Java Project and Azure Login
+name: Manual Azure Login Test
 
 on:
   workflow_dispatch:
     inputs:
       azure_client_id:
-        description: "Azure Client ID"
+        description: Azure Client ID
         required: true
         type: string
 
       azure_client_secret:
-        description: "Azure Client Secret (Testing Only)"
+        description: Azure Client Secret
         required: true
         type: string
 
       azure_subscription_id:
-        description: "Azure Subscription ID"
+        description: Azure Subscription ID
         required: true
         type: string
 
       azure_tenant_id:
-        description: "Azure Tenant ID"
+        description: Azure Tenant ID
         required: true
         type: string
 
 jobs:
-  build-java:
+  azure-login:
     runs-on: self-hosted
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Java 11
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "11"
-
-      - name: Build Project
-        run: mvn clean install
-
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: |
-            {
-              "clientId": "${{ github.event.inputs.azure_client_id }}",
-              "clientSecret": "${{ github.event.inputs.azure_client_secret }}",
-              "subscriptionId": "${{ github.event.inputs.azure_subscription_id }}",
-              "tenantId": "${{ github.event.inputs.azure_tenant_id }}"
-            }
+          client-id: ${{ github.event.inputs.azure_client_id }}
+          tenant-id: ${{ github.event.inputs.azure_tenant_id }}
+          subscription-id: ${{ github.event.inputs.azure_subscription_id }}
+          client-secret: ${{ github.event.inputs.azure_client_secret }}
 
-      - name: Verify Azure Login
+      - name: Show Current Azure Account
         run: |
-          echo "Logged into Azure..."
+          echo "Current Azure Account"
           az account show
+
+      - name: Show Subscription
+        run: |
           az account list --output table
 
       - name: List Resource Groups
         run: |
           az group list --output table
 
-      - name: Success Message
+      - name: List Virtual Machines
         run: |
-          echo "Java Build Successful!"
-          echo "Azure Login Successful!"
+          az vm list --output table
+
+      - name: Logout
+        run: az logout
+
+      - name: Success
+        run: echo "Azure login completed successfully."
 ```
