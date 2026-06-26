@@ -1,39 +1,61 @@
-```yaml
-name: Manual Azure Login Test
+name: Azure Manual Deploy
 
+# Only allow manual triggering from the GitHub Actions UI / API.
+# No push, pull_request, or schedule triggers are defined.
 on:
   workflow_dispatch:
     inputs:
       azure_client_id:
-        description: "Enter Azure Client ID"
+        description: 'Azure Client ID (App Registration / Service Principal)'
         required: true
         type: string
-
-      azure_client_secret:
-        description: "Enter Azure Client Secret"
-        required: true
-        type: string
-
-      azure_subscription_id:
-        description: "Enter Azure Subscription ID"
-        required: true
-        type: string
-
       azure_tenant_id:
-        description: "Enter Azure Tenant ID"
+        description: 'Azure Tenant ID'
         required: true
         type: string
+      azure_subscription_id:
+        description: 'Azure Subscription ID'
+        required: true
+        type: string
+      azure_client_secret:
+        description: 'Azure Client Secret (leave blank if using OIDC federated credentials)'
+        required: false
+        type: string
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+        default: dev
+
+permissions:
+  id-token: write   # needed for OIDC login to Azure
+  contents: read
 
 jobs:
-  azure-login:
-    name: Login to Azure
-    runs-on: self-hosted
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Login to Azure
+      # ---- Option A: Login using OIDC (recommended, no client secret needed) ----
+      - name: Azure Login (OIDC)
+        if: ${{ github.event.inputs.azure_client_secret == '' }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ github.event.inputs.azure_client_id }}
+          tenant-id: ${{ github.event.inputs.azure_tenant_id }}
+          subscription-id: ${{ github.event.inputs.azure_subscription_id }}
+
+      # ---- Option B: Login using a Client Secret (if provided at trigger time) ----
+      - name: Azure Login (Client Secret)
+        if: ${{ github.event.inputs.azure_client_secret != '' }}
         uses: azure/login@v2
         with:
           creds: |
@@ -44,61 +66,18 @@ jobs:
               "tenantId": "${{ github.event.inputs.azure_tenant_id }}"
             }
 
-      - name: Verify Azure CLI Installation
+      - name: Verify Azure CLI access
         run: |
-          az version
-
-      - name: Show Current Azure Account
-        run: |
-          echo "==============================="
-          echo "Current Azure Account"
-          echo "==============================="
           az account show
-
-      - name: List Azure Subscriptions
-        run: |
-          echo "==============================="
-          echo "Azure Subscriptions"
-          echo "==============================="
           az account list --output table
 
-      - name: List Resource Groups
-        run: |
-          echo "==============================="
-          echo "Resource Groups"
-          echo "==============================="
-          az group list --output table
+      # Add your actual deployment steps below, e.g.:
+      # - name: Deploy to Azure Web App
+      #   uses: azure/webapps-deploy@v3
+      #   with:
+      #     app-name: 'my-app-name'
+      #     package: '.'
 
-      - name: List Virtual Machines
-        run: |
-          echo "==============================="
-          echo "Virtual Machines"
-          echo "==============================="
-          az vm list --output table
-
-      - name: List Storage Accounts
-        run: |
-          echo "==============================="
-          echo "Storage Accounts"
-          echo "==============================="
-          az storage account list --output table
-
-      - name: List Virtual Networks
-        run: |
-          echo "==============================="
-          echo "Virtual Networks"
-          echo "==============================="
-          az network vnet list --output table
-
-      - name: Logout from Azure
+      - name: Azure Logout
         if: always()
-        run: |
-          az logout
-
-      - name: Success
-        run: |
-          echo "========================================="
-          echo "Azure Login Successful"
-          echo "All Azure CLI commands executed."
-          echo "========================================="
-```
+        run: az logout || true
