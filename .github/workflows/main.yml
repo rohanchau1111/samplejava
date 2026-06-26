@@ -1,4 +1,4 @@
-name: Azure Manual Deploy
+name: Azure Create Resource Group (Manual)
 
 # Only allow manual triggering from the GitHub Actions UI / API.
 # No push, pull_request, or schedule triggers are defined.
@@ -30,13 +30,22 @@ on:
           - staging
           - production
         default: dev
+      resource_group_name:
+        description: 'Name of the resource group to create'
+        required: true
+        type: string
+      resource_group_location:
+        description: 'Azure region for the resource group (e.g. eastus, centralindia, westeurope)'
+        required: true
+        type: string
+        default: 'centralindia'
 
 permissions:
   id-token: write   # needed for OIDC login to Azure
   contents: read
 
 jobs:
-  deploy:
+  create-resource-group:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
 
@@ -71,12 +80,17 @@ jobs:
           az account show
           az account list --output table
 
-      # Add your actual deployment steps below, e.g.:
-      # - name: Deploy to Azure Web App
-      #   uses: azure/webapps-deploy@v3
-      #   with:
-      #     app-name: 'my-app-name'
-      #     package: '.'
+      - name: Create Resource Group
+        run: |
+          echo "Creating resource group '${{ github.event.inputs.resource_group_name }}' in '${{ github.event.inputs.resource_group_location }}'..."
+          az group create \
+            --name "${{ github.event.inputs.resource_group_name }}" \
+            --location "${{ github.event.inputs.resource_group_location }}" \
+            --tags environment=${{ github.event.inputs.environment }} createdBy=github-actions
+
+      - name: Verify Resource Group
+        run: |
+          az group show --name "${{ github.event.inputs.resource_group_name }}" --output table
 
       - name: Azure Logout
         if: always()
